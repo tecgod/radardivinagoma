@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#d97724">
+<title>Radar Comercial | Divina Goma</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--orange:#d97724;--orange2:#f5a044;--ink:#252525;--muted:#737373;--bg:#f5f5f4;--card:#fff;--line:#e7e5e4;--green:#16834a;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.top{background:#24201d;color:#fff;padding:17px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:12px;background:var(--orange);display:grid;place-items:center;font-weight:900;color:#fff}.brand strong{display:block;font-size:16px}.brand small{color:#d6d3d1}
+.wrap{max-width:1100px;margin:auto;padding:20px}.hidden{display:none!important}
+.panel,.stat,.login{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 2px 8px #00000008}
+.login{max-width:420px;margin:8vh auto;padding:26px}.login h1{margin:0 0 6px}.muted{color:var(--muted)}label{display:block;font-size:13px;font-weight:650;margin:12px 0 5px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d6d3d1;border-radius:10px;background:#fff;color:var(--ink);outline-color:var(--orange)}
+button.primary{background:var(--orange);border:0;color:#fff;border-radius:10px;padding:11px 16px;font-weight:700}
+button.secondary{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--ink)}
+button.danger{background:#fff;border:1px solid #f2c6c2;color:var(--red);border-radius:9px;padding:7px 10px}
+button:disabled{opacity:.55;cursor:not--allowed}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.stat b{font-size:26px;display:block}.stat span{font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:8px;overflow:auto;margin:18px 0}.tab{white-space:nowrap;border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:999px}.tab.active{background:#2b2520;color:#fff;border-color:#2b2520}
+.toolbar{display:grid;grid-template-columns:1fr 220px;gap:10px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.tablewrap{overflow:auto}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff1df;color:#96500e;font-size:12px;font-weight:700}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}.full{grid-column:1/-1}
+.notice{padding:11px 13px;border-radius:10px;background:#fff7ed;color:#8a4b12;font-size:13px;margin:12px 0}
+.status{font-size:13px;margin-top:10px;min-height:20px}.empty{padding:28px;text-align:center;color:var(--muted)}
+@media(max-width:700px){.wrap{padding:13px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.top{padding:13px}.hide-mobile{display:none}th,td{padding:9px 7px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="mark">DG</div><div><strong>Radar Comercial</strong><small>Divina Goma</small></div></div>
+  <div class="row"><span id="userLabel" class="hide-mobile"></span><button id="logoutBtn" class="secondary hidden">Sair</button></div>
+</header>
+
+<main id="loginView" class="wrap">
+  <section class="login">
+    <h1>Entrar no Radar</h1><p class="muted">Acesse com seu e-mail e senha.</p>
+    <form id="loginForm">
+      <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+      <label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required>
+      <div style="margin-top:17px"><button class="primary" style="width:100%">Entrar</button></div>
+      <div id="loginStatus" class="status" role="status"></div>
+    </form>
+  </section>
+</main>
+
+<main id="appView" class="wrap hidden">
+  <div class="row between"><div><h1 id="welcome" style="margin:0">Painel comercial</h1><div class="muted">Acompanhe sua carteira e organize as próximas visitas.</div></div><button id="newClientBtn" class="primary">+ Novo estabelecimento</button></div>
+  <div class="grid">
+    <div class="stat"><b id="totalClients">0</b><span>Estabelecimentos na carteira</span></div>
+    <div class="stat"><b id="activeClients">0</b><span>Clientes ativos</span></div>
+    <div class="stat"><b id="prospects">0</b><span>Em prospecção</span></div>
+    <div class="stat"><b id="followups">0</b><span>Retornos agendados</span></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="clients">Radar / Clientes</button>
+    <button class="tab" data-tab="visits">Visitas</button>
+    <button class="tab admin-only hidden" data-tab="team">Equipe</button>
+  </nav>
+
+  <section id="clientsTab" class="panel">
+    <div class="row between"><div><h2 style="margin:0">Minha carteira</h2><span class="muted">Os dados exibidos respeitam seu nível de acesso.</span></div></div>
+    <div class="toolbar" style="margin-top:15px">
+      <input id="searchClients" placeholder="Buscar por estabelecimento, bairro ou telefone">
+      <select id="filterStatus"><option value="">Todos os status</option><option>Prospect</option><option>Em negociação</option><option>Cliente ativo</option><option>Inativo</option></select>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>Estabelecimento</th><th>Tipo / Bairro</th><th>Contato</th><th>Status</th><th>Próximo retorno</th><th></th></tr></thead><tbody id="clientsBody"></tbody></table></div>
+    <div id="clientsEmpty" class="empty hidden">Nenhum estabelecimento cadastrado ainda.</div>
+  </section>
+
+  <section id="visitsTab" class="panel hidden">
+    <div class="row between"><div><h2 style="margin:0">Histórico de visitas</h2><span class="muted">Registre o resultado de cada contato presencial.</span></div><button id="newVisitBtn" class="primary">+ Registrar visita</button></div>
+    <div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Data</th><th>Estabelecimento</th><th>Resultado</th><th>Observação</th></tr></thead><tbody id="visitsBody"></tbody></table></div>
+    <div id="visitsEmpty" class="empty hidden">Nenhuma visita registrada.</div>
+  </section>
+
+  <section id="teamTab" class="panel hidden">
+    <h2 style="margin-top:0">Equipe comercial</h2>
+    <p class="muted">Os usuários são convidados pelo painel do Supabase. Aqui você consulta os perfis cadastrados.</p>
+    <div class="tablewrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th></tr></thead><tbody id="teamBody"></tbody></table></div>
+  </section>
+</main>
+
+<div id="clientModal" class="wrap hidden" style="position:fixed;inset:0;background:#0008;z-index:10;display:grid;place-items:center;overflow:auto">
+  <section class="panel" style="width:min(680px,96vw);max-height:92vh;overflow:auto">
+    <div class="row between"><h2 id="clientModalTitle" style="margin:0">Novo estabelecimento</h2><button class="secondary" id="closeClient">Fechar</button></div>
+    <form id="clientForm">
+      <input type="hidden" id="clientId">
+      <div class="formgrid">
+        <div class="full"><label>Nome do estabelecimento *</label><input id="cName" required maxlength="140"></div>
+        <div><label>Tipo de comércio</label><select id="cType"><option value="">Selecione</option><option>Mercadinho</option><option>Padaria</option><option>Casa de cereais</option><option>Tapiocaria</option><option>Café / Lanchonete</option><option>Restaurante</option><option>Hotel / Pousada</option><option>Distribuidor / Atacado</option><option>Outro</option></select></div>
+        <div><label>Status</label><select id="cStatus"><option>Prospect</option><option>Em negociação</option><option>Cliente ativo</option><option>Inativo</option></select></div>
+        <div><label>Telefone / WhatsApp</label><input id="cPhone" inputmode="tel"></div>
+        <div><label>Responsável / Compras</label><input id="cContact"></div>
+        <div><label>Município</label><input id="cCity" value="Fortaleza"></div>
+        <div><label>Bairro</label><input id="cNeighborhood"></div>
+        <div class="full"><label>Endereço completo</label><input id="cAddress" placeholder="Rua, número, complemento e referência"></div>
+        <div><label>Classificação da oportunidade</label><select id="cOpportunity"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+        <div><label>Estoque informado (kg)</label><input id="cStock" type="number" min="0" step="0.1"></div>
+        <div><label>Próximo retorno</label><input id="cNext" type="date"></div>
+        <div><label>Potencial mensal (kg)</label><input id="cPotential" type="number" min="0" step="1"></div>
+        <div class="full"><label>Observações</label><textarea id="cNotes" rows="3"></textarea></div>
+        <div id="assignWrap" class="full hidden"><label>Responsável pela carteira</label><select id="cOwner"></select></div>
+      </div>
+      <div class="row between" style="margin-top:16px"><span id="clientStatus" class="status"></span><button class="primary">Salvar estabelecimento</button></div>
+    </form>
+  </section>
+</div>
+
+<div id="visitModal" class="wrap hidden" style="position:fixed;inset:0;background:#0008;z-index:11;display:grid;place-items:center;overflow:auto">
+  <section class="panel" style="width:min(560px,96vw)">
+    <div class="row between"><h2 style="margin:0">Registrar visita</h2><button class="secondary" id="closeVisit">Fechar</button></div>
+    <form id="visitForm">
+      <label>Estabelecimento *</label><select id="vClient" required></select>
+      <label>Data da visita *</label><input id="vDate" type="date" required>
+      <label>Resultado</label><select id="vResult"><option>Contato realizado</option><option>Responsável ausente</option><option>Solicitou retorno</option><option>Negociação</option><option>Pedido realizado</option><option>Sem interesse</option></select>
+      <label>Estoque informado (kg)</label><input id="vStock" type="number" min="0" step="0.1">
+      <label>Observação</label><textarea id="vNotes" rows="3"></textarea>
+      <div class="row between" style="margin-top:15px"><span id="visitStatus" class="status"></span><button class="primary">Salvar visita</button></div>
+    </form>
+  </section>
+</div>
+
+<script>
+/*
+  CONFIGURAÇÃO: preencha URL e anon key do projeto Supabase.
+  A chave anon pode ficar no navegador quando o banco estiver protegido por RLS.
+  Nunca coloque a service_role key neste arquivo.
+*/
+const SUPABASE_URL = "https://jksyrxkkrontjkronzlz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_2NpHw-VzvjOxHqpduRbKmA_Or9x_LE2";
+let db, sessionUser, profile, clients = [], sellers = [], visits = [];
+
+const $ = id => document.getElementById(id);
+const today = () => new Date().toLocaleDateString('en-CA');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isAdmin = () => profile?.role === 'admin';
+const msg = (id, text, bad=false) => { $(id).textContent = text; $(id).style.color = bad ? '#b42318' : '#16834a'; };
+
+async function init(){
+  if(SUPABASE_URL.startsWith('COLE_') || SUPABASE_ANON_KEY.startsWith('COLE_')){
+    $('loginStatus').textContent = 'O sistema precisa ser conectado ao Supabase. Consulte o arquivo LEIA-ME.';
+    return;
+  }
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const {data:{session}} = await db.auth.getSession();
+  if(session) await loadApp();
+  db.auth.onAuthStateChange(async (_event, session) => {
+    if(session) await loadApp(); else showLogin();
+  });
+}
+function showLogin(){ $('loginView').classList.remove('hidden'); $('appView').classList.add('hidden'); $('logoutBtn').classList.add('hidden'); $('userLabel').textContent=''; }
+async function loadApp(){
+  const {data:{user}} = await db.auth.getUser(); sessionUser = user;
+  const {data:p,error:pe} = await db.from('profiles').select('id,full_name,role').eq('id',user.id).single();
+  if(pe || !p){ alert('Seu perfil ainda não foi configurado. Peça ao administrador para verificar o cadastro.'); await db.auth.signOut(); return; }
+  profile = p;
+  $('loginView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('logoutBtn').classList.remove('hidden');
+  $('userLabel').textContent = `${profile.full_name || user.email} • ${isAdmin()?'Administrador':'Vendedor'}`;
+  $('welcome').textContent = `Olá, ${profile.full_name || 'vendedor(a)'}`;
+  document.querySelectorAll('.admin-only').forEach(e=>e.classList.toggle('hidden',!isAdmin()));
+  $('assignWrap').classList.toggle('hidden',!isAdmin());
+  await refreshAll();
+}
+async function refreshAll(){
+  let q = db.from('clients').select('*').order('name');
+  const {data,error} = await q;
+  if(error){ alert('Erro ao carregar carteira: '+error.message); return; }
+  clients = data || [];
+  if(isAdmin()){
+    const r = await db.from('profiles').select('id,full_name,role').order('full_name');
+    sellers = r.data || [];
+    renderTeam(); fillOwners();
+  } else sellers = [];
+  const v = await db.from('visits').select('id,client_id,visit_date,result,notes,created_at').order('visit_date',{ascending:false}).limit(100);
+  visits = v.data || [];
+  renderClients(); renderVisits(); renderStats();
+}
+function renderStats(){
+  $('totalClients').textContent=clients.length;
+  $('activeClients').textContent=clients.filter(c=>c.status==='Cliente ativo').length;
+  $('prospects').textContent=clients.filter(c=>c.status==='Prospect').length;
+  $('followups').textContent=clients.filter(c=>c.next_followup && c.next_followup>=today()).length;
+}
+function renderClients(){
+  const term=$('searchClients').value.toLowerCase(), status=$('filterStatus').value;
+  const rows=clients.filter(c=>(!status||c.status===status)&&[c.name,c.neighborhood,c.phone,c.city].join(' ').toLowerCase().includes(term));
+  $('clientsBody').innerHTML=rows.map(c=>`<tr>
+    <td><strong>${esc(c.name)}</strong><br><span class="muted">${esc(c.address||'')}</span></td>
+    <td>${esc(c.business_type||'')}<br><span class="muted">${esc(c.neighborhood||'')}${c.city?' • '+esc(c.city):''}</span></td>
+    <td>${esc(c.contact_name||'')}<br>${esc(c.phone||'')}</td>
+    <td><span class="tag">${esc(c.status||'Prospect')}</span><br><small class="muted">Oportunidade: ${esc(c.opportunity||'Média')}</small></td>
+    <td>${c.next_followup?new Date(c.next_followup+'T12:00:00').toLocaleDateString('pt-BR'):'-'}</td>
+    <td><button class="secondary" onclick="editClient('${c.id}')">Editar</button></td></tr>`).join('');
+  $('clientsEmpty').classList.toggle('hidden',rows.length>0);
+}
+function renderVisits(){
+  $('visitsBody').innerHTML=visits.map(v=>{const c=clients.find(x=>x.id===v.client_id);return `<tr><td>${v.visit_date?new Date(v.visit_date+'T12:00:00').toLocaleDateString('pt-BR'):'-'}</td><td>${esc(c?.name||'Estabelecimento')}</td><td>${esc(v.result||'')}</td><td>${esc(v.notes||'')}</td></tr>`}).join('');
+  $('visitsEmpty').classList.toggle('hidden',visits.length>0);
+}
+function renderTeam(){
+  $('teamBody').innerHTML=sellers.map(s=>`<tr><td>${esc(s.full_name||'Sem nome')}</td><td>${esc(s.id===sessionUser.id?sessionUser.email:'Usuário cadastrado')}</td><td><span class="tag">${esc(s.role)}</span></td></tr>`).join('');
+}
+function fillOwners(){
+  $('cOwner').innerHTML=sellers.filter(s=>s.role==='seller').map(s=>`<option value="${s.id}">${esc(s.full_name||'Vendedor')}</option>`).join('');
+}
+function openClient(c=null){
+  $('clientForm').reset(); $('clientId').value=c?.id||'';
+  $('clientModalTitle').textContent=c?'Editar estabelecimento':'Novo estabelecimento';
+  $('cName').value=c?.name||''; $('cType').value=c?.business_type||''; $('cStatus').value=c?.status||'Prospect';
+  $('cPhone').value=c?.phone||''; $('cContact').value=c?.contact_name||''; $('cCity').value=c?.city||'Fortaleza';
+  $('cNeighborhood').value=c?.neighborhood||''; $('cAddress').value=c?.address||''; $('cOpportunity').value=c?.opportunity||'Média';
+  $('cStock').value=c?.stock_kg??''; $('cNext').value=c?.next_followup||''; $('cPotential').value=c?.potential_monthly_kg??''; $('cNotes').value=c?.notes||'';
+  if(isAdmin() && c?.assigned_to) $('cOwner').value=c.assigned_to;
+  $('clientModal').classList.remove('hidden');
+}
+window.editClient = id => openClient(clients.find(c=>c.id===id));
+$('newClientBtn').onclick=()=>openClient(); $('closeClient').onclick=()=>$('clientModal').classList.add('hidden');
+$('clientForm').onsubmit=async e=>{
+  e.preventDefault(); msg('clientStatus','Salvando...');
+  const id=$('clientId').value;
+  const payload={name:$('cName').value.trim(),business_type:$('cType').value,status:$('cStatus').value,phone:$('cPhone').value.trim(),contact_name:$('cContact').value.trim(),city:$('cCity').value.trim(),neighborhood:$('cNeighborhood').value.trim(),address:$('cAddress').value.trim(),opportunity:$('cOpportunity').value,stock_kg:$('cStock').value===''?null:Number($('cStock').value),next_followup:$('cNext').value||null,potential_monthly_kg:$('cPotential').value===''?null:Number($('cPotential').value),notes:$('cNotes').value.trim()};
+  if(isAdmin() && $('cOwner').value) payload.assigned_to=$('cOwner').value;
+  else if(!id) payload.assigned_to=sessionUser.id;
+  let result=id?await db.from('clients').update(payload).eq('id',id):await db.from('clients').insert(payload);
+  if(result.error){msg('clientStatus',result.error.message,true);return;}
+  $('clientModal').classList.add('hidden'); await refreshAll();
+};
+$('searchClients').oninput=renderClients; $('filterStatus').onchange=renderClients;
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));
+  ['clients','visits','team'].forEach(t=>$(t+'Tab').classList.toggle('hidden',b.dataset.tab!==t));
+});
+$('newVisitBtn').onclick=()=>{
+  $('visitForm').reset(); $('vDate').value=today();
+  $('vClient').innerHTML=clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('visitModal').classList.remove('hidden');
+};
+$('closeVisit').onclick=()=>$('visitModal').classList.add('hidden');
+$('visitForm').onsubmit=async e=>{
+  e.preventDefault();msg('visitStatus','Salvando...');
+  const clientId=$('vClient').value, stock=$('vStock').value;
+  const {error}=await db.from('visits').insert({client_id:clientId,visit_date:$('vDate').value,result:$('vResult').value,stock_kg:stock===''?null:Number(stock),notes:$('vNotes').value.trim()});
+  if(error){msg('visitStatus',error.message,true);return;}
+  if(stock!=='') await db.from('clients').update({stock_kg:Number(stock)}).eq('id',clientId);
+  $('visitModal').classList.add('hidden');await refreshAll();
+};
+$('loginForm').onsubmit=async e=>{e.preventDefault();msg('loginStatus','Entrando...');const {error}=await db.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(error)msg('loginStatus',error.message,true);};
+$('logoutBtn').onclick=()=>db.auth.signOut();
+init();
+</script>
+</body>
+</html>
